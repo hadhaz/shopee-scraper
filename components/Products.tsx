@@ -1,10 +1,17 @@
-import Link from "next/link";
 import { useEffect, useState } from "react";
-import JSZip, { folder } from "jszip";
+import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { product } from "@core/@types/products";
 import TableProducts from "./TableProduct";
 import JSZipUtils from "jszip-utils";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  selectedError,
+  selectedLoading,
+  setError,
+  setLoading,
+} from "@core/redux/ui-slice";
+import Loading from "./common/Loading";
 
 type PropType = {
   shopId: number;
@@ -17,18 +24,21 @@ const zip = new JSZip();
 
 export default function Products(props: PropType) {
   const [products, setProducts] = useState<product[]>();
-  const [error, setError] = useState<boolean>(false);
   const [filename, setFilename] = useState<string>("");
-  const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
   const [total, setTotal] = useState<number>(0);
+  const dispatch = useDispatch();
+  const loading = useSelector(selectedLoading);
+  const error = useSelector(selectedError);
 
   useEffect(() => {
     const getProductsHandler = async () => {
+      dispatch(setLoading(true));
+      dispatch(setError(false));
       const res = await fetch("/api/get-products?shopId=" + props.shopId);
       const data = await res.json();
 
       if (data === null) {
-        return setError(true);
+        dispatch(setError(true));
       }
 
       // edit price
@@ -39,39 +49,18 @@ export default function Products(props: PropType) {
       });
 
       setProducts(data);
+      dispatch(setLoading(false));
     };
 
     getProductsHandler();
-  }, [props.shopId]);
-
-  const handleNameChange = (e: React.FocusEvent<HTMLInputElement>) => {
-    const data = e.target.value;
-
-    // if data not contain .zip, add it
-    if (!data.includes(".zip")) {
-      setFilename(data + ".zip");
-    }
-  };
-
-  const confirmationHandler = async (
-    e: React.MouseEvent<HTMLButtonElement>
-  ) => {
-    e.preventDefault();
-
-    setStatus("loading");
-    console.log(zip);
-    await zip.generateAsync({ type: "blob" }).then(content => {
-      saveAs(content, filename);
-      setStatus("idle");
-    });
-  };
+  }, [props.shopId, dispatch]);
 
   const downloadHandler = async () => {
     const totalItem = products?.reduce((acc, item) => {
       return acc + item.images.length;
     }, 0);
     setTotal(totalItem!);
-    setStatus("loading");
+    dispatch(setLoading(true));
 
     const zip = new JSZip();
     let count = 0;
@@ -95,7 +84,7 @@ export default function Products(props: PropType) {
             zip.generateAsync({ type: "blob" }).then(content => {
               saveAs(content, `${props.shopName}.zip`);
             });
-            setStatus("idle");
+            dispatch(setLoading(false));
           }
         });
       });
@@ -120,43 +109,8 @@ export default function Products(props: PropType) {
     );
   }
 
-  if (status === "loading") {
-    return (
-      <div className='border-2 border-yellow-500 mt-6 px-6 py-3 max-w-[640px]'>
-        <h1 className='font-semibold text-xl text-yellow-600'>Loading...</h1>
-        <p>Harap tunggu sedang mendownload {total} gambar</p>
-      </div>
-    );
-  }
-
-  if (status === "done") {
-    return (
-      <div className='border-2 border-green-500 mt-6 px-6 py-3 max-w-[640px]'>
-        <h1 className='font-semibold text-xl text-green-600'>Selesai!</h1>
-        <p>Unduhan selesai</p>
-        <form>
-          <div className='flex gap-2 items-center my-2'>
-            <label htmlFor='nama'>Nama File</label>
-            <input
-              type='text'
-              name='nama'
-              id='nama'
-              className='rounded-sm px-4 py-1 outline-none border'
-              placeholder='gambarku.zip'
-              value={filename}
-              onChange={e => setFilename(e.target.value)}
-              onBlur={handleNameChange}
-            />
-          </div>
-          <button
-            onClick={confirmationHandler}
-            className='w-full my-2 bg-green-400 hover:bg-green-600 hover:text-slate-50 font-semibold py-1 rounded-sm'
-          >
-            Konfirmasi
-          </button>
-        </form>
-      </div>
-    );
+  if (loading) {
+    return <Loading message='Tunggu sebentar yaa ☕' />;
   }
 
   // return table view
@@ -165,13 +119,13 @@ export default function Products(props: PropType) {
       <div className='flex gap-2 my-6'>
         <button
           onClick={downloadHandler}
-          className='bg-emerald-300 hover:bg-emerald-500 rounded-md text-slate-800 hover:text-slate-100 font-medium py-1 px-3'
+          className='bg-emerald-300 hover:bg-emerald-500 rounded-md text-sm md:text-base text-slate-800 hover:text-slate-100 font-medium py-1 px-3'
         >
           Unduh Semua Gambar
         </button>
         <button
           onClick={downloadCsv}
-          className=' bg-lime-300 hover:bg-lime-500 rounded-md text-slate-800 hover:text-slate-100 font-medium py-1 px-3'
+          className=' bg-lime-300 hover:bg-lime-500 rounded-md text-sm md:text-base text-slate-800 hover:text-slate-100 font-medium py-1 px-3'
         >
           Unduh Excel/CSV
         </button>
@@ -189,7 +143,7 @@ export default function Products(props: PropType) {
           </p>
         </div>
       </div>
-      <TableProducts products={products || []} loading={status === "loading"} />
+      <TableProducts products={products || []} />
     </div>
   );
 }

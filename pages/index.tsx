@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getHintSearch } from "@core/api/product";
 import Products from "@components/Products";
 import Seo from "@components/Seo";
@@ -17,6 +17,7 @@ export default function Home() {
   const [follower, setFollower] = useState<number>();
   const [shopName, setShopName] = useState<string>();
   const [rating, setRating] = useState<number>(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const searchHandler = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
@@ -35,6 +36,12 @@ export default function Home() {
     setFollower(shop.follower_count);
   };
 
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
+
   return (
     <div className='container px-8 py-4'>
       <Seo />
@@ -48,6 +55,7 @@ export default function Home() {
             type='text'
             id='shop-name'
             value={search}
+            ref={inputRef}
             onChange={searchHandler}
             placeholder='Nama toko harus sama persis dengan di Shopee'
             className='border rounded-md shadow-sm h-8 outline-none px-4 w-[80vw] max-w-[420px] py-1'
@@ -89,10 +97,10 @@ export default function Home() {
         />
       )}
       {!shopId && (
-        <div className='flex flex-col items-center justify-center mt-12'>
+        <div className='absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 flex flex-col items-center justify-center mt-12'>
           <div>
-            <p className='text-gray-500 text-xl font-semibold'>
-              Cek koneksi apabila rekomendasi pencarian tidak muncul
+            <p className='text-gray-500 text-xl font-semibold text-center'>
+              Cek koneksi internet apabila rekomendasi pencarian tidak muncul
             </p>
           </div>
           <footer>

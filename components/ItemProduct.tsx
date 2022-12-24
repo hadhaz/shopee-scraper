@@ -2,6 +2,8 @@ import { product } from "@core/@types/products";
 import JSZip from "jszip";
 import JSZipUtils from "jszip-utils";
 import { saveAs } from "file-saver";
+import { useDispatch } from "react-redux";
+import { setLoading } from "@core/redux/ui-slice";
 
 type PropType = {
   item: product;
@@ -9,10 +11,12 @@ type PropType = {
 };
 
 export default function Items({ item, price }: PropType) {
+  const dispatch = useDispatch();
+
   const downloadHandler = async () => {
+    dispatch(setLoading(true));
     const zip = new JSZip();
     let count = 0;
-    // get 10 words from item name
 
     item.images.forEach(async (image, index) => {
       const url = `/api/get-image?resourceId=${image}`;
@@ -31,6 +35,7 @@ export default function Items({ item, price }: PropType) {
           zip.generateAsync({ type: "blob" }).then(content => {
             saveAs(content, `${item.name}.zip`);
           });
+          dispatch(setLoading(false));
         }
       });
     });
